@@ -1,0 +1,708 @@
+{
+  "info": {
+    "name": "Chess Coach API",
+    "description": "Postman collection for the Chess Coach Backend API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "classroomId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "lessonId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "homeworkId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "materialId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "notificationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "studentId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"trainer\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.collectionVariables.set('token', jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Classrooms",
+      "item": [
+        {
+          "name": "Create Classroom",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentEmail\": \"student@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classrooms"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Classrooms",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classrooms"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Classroom By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classrooms",
+                "{{classroomId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Notes",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sharedNotes\": \"Updated notes...\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classrooms",
+                "{{classroomId}}",
+                "notes"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sessions",
+      "item": [
+        {
+          "name": "Get All Sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "classrooms", "{{classroomId}}", "sessions"]
+            }
+          }
+        },
+        {
+          "name": "Get Sessions by Student ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions/student/{{studentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions", "student", "{{studentId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-04-01\",\n  \"startTime\": \"2026-04-01T10:00:00Z\",\n  \"endTime\": \"2026-04-01T11:00:00Z\",\n  \"title\": \"Opening Principles\",\n  \"link\": \"https://meet.google.com/xyz\",\n  \"notes\": \"Review previous homework before starting\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classrooms",
+                "{{classroomId}}",
+                "sessions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"COMPLETED\",\n  \"notes\": \"Good session\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/sessions/{{sessionId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classrooms",
+                "{{classroomId}}",
+                "sessions",
+                "{{sessionId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Session",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/sessions/{{sessionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classrooms",
+                "{{classroomId}}",
+                "sessions",
+                "{{sessionId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lessons",
+      "item": [
+        {
+          "name": "Create Lesson",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Endgame basics\",\n  \"content\": \"Learn how to mate with K+R vs K\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/lessons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classrooms",
+                "{{classroomId}}",
+                "lessons"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Lesson",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Updated content\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/lessons/{{lessonId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classrooms",
+                "{{classroomId}}",
+                "lessons",
+                "{{lessonId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark Lesson Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/lessons/{{lessonId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classrooms",
+                "{{classroomId}}",
+                "lessons",
+                "{{lessonId}}",
+                "read"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Homework",
+      "item": [
+        {
+          "name": "Create Homework",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Mate in 2\",\n  \"type\": \"BOARD\",\n  \"dueDate\": \"2026-04-10T23:59:59Z\",\n  \"imageUrls\": [\n    \"https://res.cloudinary.com/dtqkltvop/image/upload/v1/homeworks/board1.jpg\"\n  ],\n  \"challenge\": {\n    \"fen\": \"r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 1\",\n    \"winningMoves\": [\n      \"Qxf7#\"\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/homework",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "classrooms", "{{classroomId}}", "homework"]
+            }
+          }
+        },
+        {
+          "name": "Update Homework",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imageUrls\": [\n    \"https://res.cloudinary.com/dtqkltvop/image/upload/v1/homeworks/img1.jpg\",\n    \"https://res.cloudinary.com/dtqkltvop/image/upload/v1/homeworks/img2.jpg\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/homework/{{homeworkId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "classrooms", "{{classroomId}}", "homework", "{{homeworkId}}"]
+            }
+          }
+        },
+        {
+          "name": "Submit Homework",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission\": \"Qxf7#\",\n  \"imageUrls\": [\n    \"https://res.cloudinary.com/dtqkltvop/image/upload/v1/homeworks/submission1.jpg\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/homework/{{homeworkId}}/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "classrooms", "{{classroomId}}", "homework", "{{homeworkId}}", "submit"]
+            }
+          }
+        },
+        {
+          "name": "Evaluate Homework",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"score\": 100,\n  \"feedback\": \"Excellent!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/homework/{{homeworkId}}/evaluate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classrooms",
+                "{{classroomId}}",
+                "homework",
+                "{{homeworkId}}",
+                "evaluate"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Materials",
+      "item": [
+        {
+          "name": "Upload Material",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Opening Guidelines\",\n  \"type\": \"PDF\",\n  \"url\": \"http://example.com/file.pdf\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/materials",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classrooms",
+                "{{classroomId}}",
+                "materials"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Material",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/materials/{{materialId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classrooms",
+                "{{classroomId}}",
+                "materials",
+                "{{materialId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Send Notification (Student)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"I have a question about the homework.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classrooms",
+                "{{classroomId}}",
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Notifications (Trainer)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark Read (Trainer)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Upload",
+      "item": [
+        {
+          "name": "Get Upload Signature",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/upload/signature",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "upload", "signature"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

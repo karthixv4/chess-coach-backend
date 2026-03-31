@@ -1,0 +1,201 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+enum Role {
+  TRAINER
+  STUDENT
+}
+
+enum SessionStatus {
+  SCHEDULED
+  ONGOING
+  COMPLETED
+  CANCELLED
+  POSTPONED
+  PREPONED
+}
+
+enum LessonStatus {
+  NEW
+  REVIEWED
+}
+
+enum HomeworkType {
+  BOARD
+  TEXT
+  VIDEO
+  IMAGE
+}
+
+enum HomeworkStatus {
+  ASSIGNED
+  SUBMITTED
+  EVALUATED
+}
+
+enum MaterialType {
+  PDF
+  VIDEO
+  LINK
+  IMAGE
+}
+
+model User {
+  id           String      @id @default(cuid())
+  name         String
+  email        String      @unique
+  passwordHash String
+  role         Role
+  avatar       String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // As trainer: many classrooms
+  classroomsAsTrainer Classroom[] @relation("TrainerClassrooms")
+  // As student: one classroom
+  classroomAsStudent  Classroom?  @relation("StudentClassroom")
+
+  // Notifications sent by user (student sending hints)
+  notificationsSent Notification[] @relation("NotificationSender")
+}
+
+model Classroom {
+  id        String   @id @default(cuid())
+  progress  Int      @default(0)
+  notes     String?  // Private trainer notes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trainerId String
+  trainer   User   @relation("TrainerClassrooms", fields: [trainerId], references: [id])
+
+  studentId String @unique
+  student   User   @relation("StudentClassroom", fields: [studentId], references: [id])
+
+  sessions      Session[]
+  lessons       Lesson[]
+  homework      Homework[]
+  materials     Material[]
+  notifications Notification[]
+}
+
+model Session {
+  id                 String        @id @default(cuid())
+  title              String
+  date               DateTime
+  startTime          String
+  endTime            String
+  link               String?
+  status             SessionStatus @default(SCHEDULED)
+  notes              String?       // Completion notes
+  cancellationReason String?
+  rescheduledDate    DateTime?
+  rescheduledStart   String?
+  rescheduledEnd     String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  // Materials and homework attached to a session
+  sessionMaterials SessionMaterial[]
+  sessionHomework  SessionHomework[]
+}
+
+model Lesson {
+  id            String       @id @default(cuid())
+  title         String
+  date          DateTime
+  summary       String?
+  detailedNotes String?
+  videoUrl      String?
+  pgn           String?
+  status        LessonStatus @default(NEW)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+}
+
+model Homework {
+  id           String         @id @default(cuid())
+  title        String
+  type         HomeworkType
+  dueDate      DateTime
+  description  String?
+  // BOARD type fields
+  fen          String?
+  winningMoves String[]       // Array of accepted winning moves
+  // Attached images (Cloudinary URLs)
+  imageUrls    String[]
+  // Submission
+  submission   String?
+  // Evaluation
+  score        Int?
+  feedback     String?
+  status       HomeworkStatus @default(ASSIGNED)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  sessionHomework SessionHomework[]
+}
+
+model Material {
+  id        String       @id @default(cuid())
+  title     String
+  type      MaterialType
+  url       String?
+  imageUrls String[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  sessionMaterials SessionMaterial[]
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  message   String
+  fen       String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  senderId String
+  sender   User   @relation("NotificationSender", fields: [senderId], references: [id])
+}
+
+// Join table: Session ↔ Material
+model SessionMaterial {
+  sessionId  String
+  materialId String
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, materialId])
+}
+
+// Join table: Session ↔ Homework
+model SessionHomework {
+  sessionId  String
+  homeworkId String
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  homework   Homework @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, homeworkId])
+}
