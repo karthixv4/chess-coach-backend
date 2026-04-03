@@ -138,6 +138,7 @@ model Homework {
   imageUrls    String[]
   // Submission
   submission   String?
+  submissionImageUrls String[]
   // Evaluation
   score        Int?
   feedback     String?

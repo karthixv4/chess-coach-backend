@@ -95,14 +95,14 @@ const update = async (req, res, next) => {
 const submit = async (req, res, next) => {
   try {
     const { classroomId, homeworkId } = req.params;
-    const { submission, imageUrls } = req.body;
+    const { submission, submissionImageUrls } = req.body;
 
     if (!submission) {
       return res.status(400).json({ error: 'BadRequest', message: '"submission" is required.' });
     }
 
-    if (imageUrls !== undefined && !Array.isArray(imageUrls)) {
-      return res.status(400).json({ error: 'BadRequest', message: '"imageUrls" must be an array of strings.' });
+    if (submissionImageUrls !== undefined && !Array.isArray(submissionImageUrls)) {
+      return res.status(400).json({ error: 'BadRequest', message: '"submissionImageUrls" must be an array of strings.' });
     }
 
     const classroom = await prisma.classroom.findUnique({ where: { id: classroomId } });
@@ -122,7 +122,7 @@ const submit = async (req, res, next) => {
     }
 
     const data = { submission, status: 'SUBMITTED' };
-    if (imageUrls !== undefined) data.imageUrls = imageUrls;
+    if (submissionImageUrls !== undefined) data.submissionImageUrls = submissionImageUrls;
 
     const updated = await prisma.homework.update({ where: { id: homeworkId }, data });
     return res.status(200).json(updated);

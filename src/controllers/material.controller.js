@@ -83,4 +83,61 @@ const remove = async (req, res, next) => {
   }
 };
 
-module.exports = { create, remove };
+// PATCH /api/classrooms/:classroomId/materials/:materialId
+const update = async (req, res, next) => {
+  try {
+    const { classroomId, materialId } = req.params;
+    const { title, type, url, imageUrls } = req.body;
+
+    const classroom = await assertTrainerOwnsClassroom(classroomId, req.user.id, res);
+    if (!classroom) return;
+
+    const material = await prisma.material.findUnique({ where: { id: materialId } });
+    if (!material || material.classroomId !== classroomId) {
+      return res.status(404).json({ error: 'NotFound', message: 'Material not found.' });
+    }
+
+    const updateData = {};
+    if (title) updateData.title = title;
+    
+    const normalizedType = type ? type.toUpperCase() : material.type;
+    if (type) {
+      if (!VALID_TYPES.includes(normalizedType)) {
+        return res.status(400).json({ error: 'BadRequest', message: `type must be one of: ${VALID_TYPES.join(', ')}.` });
+      }
+      updateData.type = normalizedType;
+    }
+
+    const currentUrl = url !== undefined ? url : material.url;
+    const currentImageUrls = imageUrls !== undefined ? imageUrls : material.imageUrls;
+
+    if (normalizedType === 'IMAGE') {
+       if ((!currentImageUrls || !Array.isArray(currentImageUrls) || currentImageUrls.length === 0) && !currentUrl) {
+         return res.status(400).json({ error: 'BadRequest', message: 'url or imageUrls array is required for IMAGE.' });
+       }
+    } else {
+       if (!currentUrl) {
+         return res.status(400).json({ error: 'BadRequest', message: 'url is required for PDF, VIDEO, and LINK types.' });
+       }
+    }
+    
+    if (url !== undefined) updateData.url = url || null;
+    if (imageUrls !== undefined) {
+      if (!Array.isArray(imageUrls)) {
+        return res.status(400).json({ error: 'BadRequest', message: '"imageUrls" must be an array of strings.' });
+      }
+      updateData.imageUrls = imageUrls;
+    }
+
+    const updatedMaterial = await prisma.material.update({
+      where: { id: materialId },
+      data: updateData,
+    });
+
+    return res.status(200).json(updatedMaterial);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { create, remove, update };

@@ -156,6 +156,33 @@
               ]
             }
           }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "change-password"
+              ]
+            }
+          }
         }
       ]
     },
@@ -500,7 +527,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"submission\": \"Qxf7#\",\n  \"imageUrls\": [\n    \"https://res.cloudinary.com/dtqkltvop/image/upload/v1/homeworks/submission1.jpg\"\n  ]\n}"
+              "raw": "{\n  \"submission\": \"Qxf7#\",\n  \"submissionImageUrls\": [\n    \"https://res.cloudinary.com/dtqkltvop/image/upload/v1/homeworks/submission1.jpg\"\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/homework/{{homeworkId}}/submit",
@@ -568,6 +595,35 @@
                 "classrooms",
                 "{{classroomId}}",
                 "materials"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Material",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Guidelines\",\n  \"url\": \"http://example.com/updated_file.pdf\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/classrooms/{{classroomId}}/materials/{{materialId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classrooms",
+                "{{classroomId}}",
+                "materials",
+                "{{materialId}}"
               ]
             }
           }
