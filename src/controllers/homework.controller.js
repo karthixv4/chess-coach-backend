@@ -16,6 +16,21 @@ const assertTrainerOwnsClassroom = async (classroomId, trainerId, res) => {
   return classroom;
 };
 
+const formatHomeworkResponse = (hw) => {
+  if (hw.type === 'BOARD') {
+    const { fen, winningMoves, ...rest } = hw;
+    return {
+      ...rest,
+      challenge: {
+        fen,
+        winningMoves,
+        description: hw.description
+      }
+    };
+  }
+  return hw;
+};
+
 // POST /api/classrooms/:classroomId/homework
 const create = async (req, res, next) => {
   try {
@@ -44,7 +59,7 @@ const create = async (req, res, next) => {
         title,
         type: normalizedType,
         dueDate: new Date(dueDate),
-        description: description || null,
+        description: description || challenge?.description || null,
         imageUrls: imageUrls || [],
         fen: challenge?.fen || null,
         winningMoves: challenge?.winningMoves || [],
@@ -52,7 +67,7 @@ const create = async (req, res, next) => {
       },
     });
 
-    return res.status(201).json(homework);
+    return res.status(201).json(formatHomeworkResponse(homework));
   } catch (err) {
     next(err);
   }
@@ -80,12 +95,13 @@ const update = async (req, res, next) => {
     if (title !== undefined) data.title = title;
     if (dueDate !== undefined) data.dueDate = new Date(dueDate);
     if (description !== undefined) data.description = description;
+    else if (challenge?.description !== undefined) data.description = challenge.description;
     if (imageUrls !== undefined) data.imageUrls = imageUrls;
     if (challenge?.fen !== undefined) data.fen = challenge.fen;
     if (challenge?.winningMoves !== undefined) data.winningMoves = challenge.winningMoves;
 
     const updated = await prisma.homework.update({ where: { id: homeworkId }, data });
-    return res.status(200).json(updated);
+    return res.status(200).json(formatHomeworkResponse(updated));
   } catch (err) {
     next(err);
   }
@@ -125,7 +141,7 @@ const submit = async (req, res, next) => {
     if (submissionImageUrls !== undefined) data.submissionImageUrls = submissionImageUrls;
 
     const updated = await prisma.homework.update({ where: { id: homeworkId }, data });
-    return res.status(200).json(updated);
+    return res.status(200).json(formatHomeworkResponse(updated));
   } catch (err) {
     next(err);
   }
@@ -160,10 +176,59 @@ const evaluate = async (req, res, next) => {
     // Recalculate and persist classroom progress
     await recalculateProgress(classroomId);
 
-    return res.status(200).json(updated);
+    return res.status(200).json(formatHomeworkResponse(updated));
   } catch (err) {
     next(err);
   }
 };
 
-module.exports = { create, update, submit, evaluate };
+// GET /api/classrooms/:classroomId/homework/:homeworkId
+const getById = async (req, res, next) => {
+  try {
+    const { classroomId, homeworkId } = req.params;
+    
+    // Check if the user has access to this classroom (either student or trainer)
+    const classroom = await prisma.classroom.findUnique({ where: { id: classroomId } });
+    if (!classroom) {
+      return res.status(404).json({ error: 'NotFound', message: 'Classroom not found.' });
+    }
+    if (classroom.trainerId !== req.user.id && classroom.studentId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden', message: 'You do not have access to this classroom.' });
+    }
+
+    const homework = await prisma.homework.findUnique({ where: { id: homeworkId } });
+    if (!homework || homework.classroomId !== classroomId) {
+      return res.status(404).json({ error: 'NotFound', message: 'Homework not found.' });
+    }
+
+    return res.status(200).json(formatHomeworkResponse(homework));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// DELETE /api/classrooms/:classroomId/homework/:homeworkId — Trainer only
+const deleteHomework = async (req, res, next) => {
+  try {
+    const { classroomId, homeworkId } = req.params;
+
+    const classroom = await assertTrainerOwnsClassroom(classroomId, req.user.id, res);
+    if (!classroom) return;
+
+    const homework = await prisma.homework.findUnique({ where: { id: homeworkId } });
+    if (!homework || homework.classroomId !== classroomId) {
+      return res.status(404).json({ error: 'NotFound', message: 'Homework not found.' });
+    }
+
+    await prisma.homework.delete({ where: { id: homeworkId } });
+
+    // Recalculate classroom progress
+    await recalculateProgress(classroomId);
+
+    return res.status(200).json({ success: true, message: 'Homework deleted successfully.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { create, update, submit, evaluate, getById, deleteHomework };

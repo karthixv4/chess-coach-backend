@@ -18,12 +18,46 @@ const { requireRole } = require('./middleware/role');
 const { getAll: getNotifications, markRead: markNotificationRead } = require('./controllers/notification.controller');
 const { errorHandler } = require('./middleware/errorHandler');
 
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ── Rate Limiting Setup ────────────────────────────────────────────────────────
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per `window`
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'TooManyRequests', message: 'Too many requests from this IP, please try again after 15 minutes' }
+});
+
 // ── Global Middleware ──────────────────────────────────────────────────────────
-app.use(cors());
-app.use(express.json());
+// Apply helmet early to inject security headers
+app.use(helmet());
+
+// Apply global rate limiter
+app.use(globalLimiter);
+
+// Update CORS to be strict
+const allowedOrigins = process.env.FRONTEND_URL
+  ? [process.env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000']
+  : ['http://localhost:5173', 'http://localhost:5000'];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
+app.use(express.json({ limit: '1mb' }));
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
 

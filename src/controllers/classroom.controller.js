@@ -121,7 +121,20 @@ const getById = async (req, res, next) => {
       progress: classroom.progress,
       sessions: classroom.sessions,
       lessons: classroom.lessons,
-      homework: classroom.homework,
+      homework: classroom.homework.map(hw => {
+        if (hw.type === 'BOARD') {
+          const { fen, winningMoves, ...rest } = hw;
+          return {
+            ...rest,
+            challenge: {
+              fen,
+              winningMoves,
+              description: hw.description
+            }
+          };
+        }
+        return hw;
+      }),
       materials: classroom.materials,
     };
 

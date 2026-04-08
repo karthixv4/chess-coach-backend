@@ -47,6 +47,42 @@ const create = async (req, res, next) => {
   }
 };
 
+// PATCH /api/classrooms/:classroomId/sessions/:sessionId
+const update = async (req, res, next) => {
+  try {
+    const { classroomId, sessionId } = req.params;
+    const { title, date, startTime, endTime, link } = req.body;
+
+    const classroom = await assertTrainerOwnsClassroom(classroomId, req.user.id, res);
+    if (!classroom) return;
+
+    const session = await prisma.session.findUnique({ where: { id: sessionId } });
+    if (!session || session.classroomId !== classroomId) {
+      return res.status(404).json({ error: 'NotFound', message: 'Session not found.' });
+    }
+
+    const updateData = {};
+    if (title !== undefined) updateData.title = title;
+    if (date !== undefined) updateData.date = new Date(date);
+    if (startTime !== undefined) updateData.startTime = startTime;
+    if (endTime !== undefined) updateData.endTime = endTime;
+    if (link !== undefined) updateData.link = link || null;
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: 'BadRequest', message: 'No fields provided to update.' });
+    }
+
+    const updated = await prisma.session.update({
+      where: { id: sessionId },
+      data: updateData,
+    });
+
+    return res.status(200).json(updated);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // PATCH /api/classrooms/:classroomId/sessions/:sessionId/status
 const updateStatus = async (req, res, next) => {
   try {
@@ -56,9 +92,12 @@ const updateStatus = async (req, res, next) => {
       cancellationReason,
       rescheduledTo,
       notes,
-      materials: materialIds,
+      materials,
+      materialIds,
       homeworkIds,
     } = req.body;
+
+    const finalMaterialIds = materialIds || materials;
 
     if (!status || !VALID_STATUSES.includes(status.toUpperCase())) {
       return res.status(400).json({
@@ -84,22 +123,34 @@ const updateStatus = async (req, res, next) => {
       updateData.rescheduledDate = new Date(rescheduledTo.date);
       updateData.rescheduledStart = rescheduledTo.startTime;
       updateData.rescheduledEnd = rescheduledTo.endTime;
+      // Also update the primary date/time so the session reflects the new schedule
+      updateData.date = new Date(rescheduledTo.date);
+      updateData.startTime = rescheduledTo.startTime;
+      updateData.endTime = rescheduledTo.endTime;
     }
 
-    // Attach materials to session
-    if (materialIds && Array.isArray(materialIds) && materialIds.length > 0) {
-      await prisma.sessionMaterial.createMany({
-        data: materialIds.map((materialId) => ({ sessionId, materialId })),
-        skipDuplicates: true,
-      });
+    // Sync materials for session (if materials array is provided)
+    if (finalMaterialIds && Array.isArray(finalMaterialIds)) {
+      // First, remove existing links for this session
+      await prisma.sessionMaterial.deleteMany({ where: { sessionId } });
+      // Then create new links if there are any
+      if (finalMaterialIds.length > 0) {
+        await prisma.sessionMaterial.createMany({
+          data: finalMaterialIds.map((materialId) => ({ sessionId, materialId })),
+        });
+      }
     }
 
-    // Attach homework to session
-    if (homeworkIds && Array.isArray(homeworkIds) && homeworkIds.length > 0) {
-      await prisma.sessionHomework.createMany({
-        data: homeworkIds.map((homeworkId) => ({ sessionId, homeworkId })),
-        skipDuplicates: true,
-      });
+    // Sync homework for session (if homework array is provided)
+    if (homeworkIds && Array.isArray(homeworkIds)) {
+      // First, remove existing links for this session
+      await prisma.sessionHomework.deleteMany({ where: { sessionId } });
+      // Then create new links if there are any
+      if (homeworkIds.length > 0) {
+        await prisma.sessionHomework.createMany({
+          data: homeworkIds.map((homeworkId) => ({ sessionId, homeworkId })),
+        });
+      }
     }
 
     const updated = await prisma.session.update({
@@ -201,4 +252,4 @@ const getByStudentId = async (req, res, next) => {
   }
 };
 
-module.exports = { create, updateStatus, remove, getAllForClassroom, getByStudentId };
+module.exports = { create, update, updateStatus, remove, getAllForClassroom, getByStudentId };
