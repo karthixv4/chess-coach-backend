@@ -161,4 +161,40 @@ const updateNotes = async (req, res, next) => {
   }
 };
 
-module.exports = { create, getAll, getById, updateNotes };
+// DELETE /api/classrooms/:classroomId
+const deleteClassroom = async (req, res, next) => {
+  try {
+    const { classroomId } = req.params;
+    const trainerId = req.user.id;
+
+    const classroom = await prisma.classroom.findUnique({
+      where: { id: classroomId },
+      include: { student: true },
+    });
+
+    if (!classroom) {
+      return res.status(404).json({ error: 'NotFound', message: 'Classroom not found.' });
+    }
+
+    if (classroom.trainerId !== trainerId) {
+      return res.status(403).json({ error: 'Forbidden', message: 'You are not the trainer of this classroom.' });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Delete classroom (cascades sessions, homework, materials, etc.)
+      await tx.classroom.delete({ where: { id: classroomId } });
+      
+      // 2. Delete any notifications sent by the student
+      await tx.notification.deleteMany({ where: { senderId: classroom.studentId } });
+
+      // 3. Delete the actual student record
+      await tx.user.delete({ where: { id: classroom.studentId } });
+    });
+
+    return res.status(200).json({ success: true, message: 'Classroom and student deleted successfully.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { create, getAll, getById, updateNotes, deleteClassroom };

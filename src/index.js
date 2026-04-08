@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 
 const authRoutes = require('./routes/auth.routes');
+const studentRoutes = require('./routes/student.routes');
 const classroomRoutes = require('./routes/classroom.routes');
 const sessionRoutes = require('./routes/session.routes');
 const lessonRoutes = require('./routes/lesson.routes');
@@ -28,6 +29,9 @@ app.use(express.json());
 
 // Auth
 app.use('/api/auth', authRoutes);
+
+// Students
+app.use('/api/students', studentRoutes);
 
 // Classrooms (base)
 app.use('/api/classrooms', classroomRoutes);
