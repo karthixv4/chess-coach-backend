@@ -1,7 +1,7 @@
 const { recalculateProgress } = require('../utils/progressCalc');
 const prisma = require('../prisma/prismaConnection');
 
-const VALID_TYPES = ['BOARD', 'TEXT', 'VIDEO', 'IMAGE'];
+const VALID_TYPES = ['BOARD', 'TEXT', 'VIDEO', 'IMAGE', 'PUZZLE'];
 
 const assertTrainerOwnsClassroom = async (classroomId, trainerId, res) => {
   const classroom = await prisma.classroom.findUnique({ where: { id: classroomId } });
@@ -35,7 +35,7 @@ const formatHomeworkResponse = (hw) => {
 const create = async (req, res, next) => {
   try {
     const { classroomId } = req.params;
-    const { title, type, dueDate, description, imageUrls, fileUrl, challenge } = req.body;
+    const { title, type, dueDate, description, imageUrls, fileUrl, challenge, puzzleSets } = req.body;
 
     if (!title || !type || !dueDate) {
       return res.status(400).json({ error: 'BadRequest', message: 'title, type, and dueDate are required.' });
@@ -44,6 +44,10 @@ const create = async (req, res, next) => {
     const normalizedType = type.toUpperCase();
     if (!VALID_TYPES.includes(normalizedType)) {
       return res.status(400).json({ error: 'BadRequest', message: `type must be one of: ${VALID_TYPES.join(', ')}.` });
+    }
+
+    if (normalizedType === 'PUZZLE' && (!puzzleSets || !Array.isArray(puzzleSets))) {
+      return res.status(400).json({ error: 'BadRequest', message: '"puzzleSets" is required and must be an array for PUZZLE type.' });
     }
 
     if (imageUrls !== undefined && !Array.isArray(imageUrls)) {
@@ -64,6 +68,7 @@ const create = async (req, res, next) => {
         fileUrl: fileUrl || null,
         fen: challenge?.fen || null,
         winningMoves: challenge?.winningMoves || [],
+        puzzleSets: puzzleSets || null,
         status: 'ASSIGNED',
       },
     });
@@ -78,10 +83,14 @@ const create = async (req, res, next) => {
 const update = async (req, res, next) => {
   try {
     const { classroomId, homeworkId } = req.params;
-    const { title, dueDate, description, imageUrls, fileUrl, challenge } = req.body;
+    const { title, dueDate, description, imageUrls, fileUrl, challenge, puzzleSets } = req.body;
 
     if (imageUrls !== undefined && !Array.isArray(imageUrls)) {
       return res.status(400).json({ error: 'BadRequest', message: '"imageUrls" must be an array of strings.' });
+    }
+
+    if (puzzleSets !== undefined && !Array.isArray(puzzleSets)) {
+      return res.status(400).json({ error: 'BadRequest', message: '"puzzleSets" must be an array.' });
     }
 
     const classroom = await assertTrainerOwnsClassroom(classroomId, req.user.id, res);
@@ -101,6 +110,7 @@ const update = async (req, res, next) => {
     if (fileUrl !== undefined) data.fileUrl = fileUrl;
     if (challenge?.fen !== undefined) data.fen = challenge.fen;
     if (challenge?.winningMoves !== undefined) data.winningMoves = challenge.winningMoves;
+    if (puzzleSets !== undefined) data.puzzleSets = puzzleSets;
 
     const updated = await prisma.homework.update({ where: { id: homeworkId }, data });
     return res.status(200).json(formatHomeworkResponse(updated));

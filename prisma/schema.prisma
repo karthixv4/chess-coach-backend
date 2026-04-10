@@ -31,6 +31,7 @@ enum HomeworkType {
   TEXT
   VIDEO
   IMAGE
+  PUZZLE
 }
 
 enum HomeworkStatus {
@@ -138,6 +139,8 @@ model Homework {
   imageUrls    String[]
   // External file link (e.g. Google Drive)
   fileUrl      String?
+  // Puzzle sets array: [{ link: "...", expectedCount: 15, instruction: "..." }]
+  puzzleSets   Json?
   // Submission
   submission   String?
   submissionImageUrls String[]
