@@ -35,7 +35,7 @@ const formatHomeworkResponse = (hw) => {
 const create = async (req, res, next) => {
   try {
     const { classroomId } = req.params;
-    const { title, type, dueDate, description, imageUrls, challenge } = req.body;
+    const { title, type, dueDate, description, imageUrls, fileUrl, challenge } = req.body;
 
     if (!title || !type || !dueDate) {
       return res.status(400).json({ error: 'BadRequest', message: 'title, type, and dueDate are required.' });
@@ -61,6 +61,7 @@ const create = async (req, res, next) => {
         dueDate: new Date(dueDate),
         description: description || challenge?.description || null,
         imageUrls: imageUrls || [],
+        fileUrl: fileUrl || null,
         fen: challenge?.fen || null,
         winningMoves: challenge?.winningMoves || [],
         status: 'ASSIGNED',
@@ -77,7 +78,7 @@ const create = async (req, res, next) => {
 const update = async (req, res, next) => {
   try {
     const { classroomId, homeworkId } = req.params;
-    const { title, dueDate, description, imageUrls, challenge } = req.body;
+    const { title, dueDate, description, imageUrls, fileUrl, challenge } = req.body;
 
     if (imageUrls !== undefined && !Array.isArray(imageUrls)) {
       return res.status(400).json({ error: 'BadRequest', message: '"imageUrls" must be an array of strings.' });
@@ -97,6 +98,7 @@ const update = async (req, res, next) => {
     if (description !== undefined) data.description = description;
     else if (challenge?.description !== undefined) data.description = challenge.description;
     if (imageUrls !== undefined) data.imageUrls = imageUrls;
+    if (fileUrl !== undefined) data.fileUrl = fileUrl;
     if (challenge?.fen !== undefined) data.fen = challenge.fen;
     if (challenge?.winningMoves !== undefined) data.winningMoves = challenge.winningMoves;
 

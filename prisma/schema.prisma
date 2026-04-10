@@ -136,6 +136,8 @@ model Homework {
   winningMoves String[]       // Array of accepted winning moves
   // Attached images (Cloudinary URLs)
   imageUrls    String[]
+  // External file link (e.g. Google Drive)
+  fileUrl      String?
   // Submission
   submission   String?
   submissionImageUrls String[]
