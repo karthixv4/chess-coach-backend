@@ -47,6 +47,18 @@ enum MaterialType {
   IMAGE
 }
 
+enum PracticeCategory {
+  OPENINGS
+  TACTICS
+  ENDGAMES
+}
+
+enum LogWorksheetStatus {
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+}
+
 model User {
   id           String      @id @default(cuid())
   name         String
@@ -84,6 +96,7 @@ model Classroom {
   homework      Homework[]
   materials     Material[]
   notifications Notification[]
+  dailyLogs     DailyLog[]
 }
 
 model Session {
@@ -204,4 +217,23 @@ model SessionHomework {
   homework   Homework @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
 
   @@id([sessionId, homeworkId])
+}
+
+// Daily practice log submitted by a student
+model DailyLog {
+  id              String              @id @default(cuid())
+  date            DateTime            @db.Date           // Date only (no time component)
+  category        PracticeCategory
+  gamesPlayed     Int?
+  minutesSpent    Int?
+  worksheetStatus LogWorksheetStatus?
+  notes           String?             // Student's narrative notes on what was difficult
+
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([classroomId, date])     // Enforce 1 log per student per day
 }

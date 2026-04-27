@@ -12,6 +12,8 @@ const materialRoutes = require('./routes/material.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const globalSessionRoutes = require('./routes/globalSession.routes');
 const uploadRoutes = require('./routes/upload.routes');
+const dailyLogRoutes = require('./routes/dailyLog.routes');
+const analyticsRoutes = require('./routes/analytics.routes');
 
 const { authenticate } = require('./middleware/auth');
 const { requireRole } = require('./middleware/role');
@@ -42,8 +44,8 @@ app.use(globalLimiter);
 
 // Update CORS to be strict
 const allowedOrigins = process.env.FRONTEND_URL
-  ? [process.env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000']
-  : ['http://localhost:5173', 'http://localhost:5000'];
+  ? [process.env.FRONTEND_URL, 'http://localhost:5000', 'http://127.0.0.1:5000', 'http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000', 'https://chesscoach-theta.vercel.app']
+  : ['http://localhost:5000', 'http://127.0.0.1:5000', 'http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000', 'https://chesscoach-theta.vercel.app'];
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -80,6 +82,15 @@ app.use('/api/classrooms/:classroomId/notifications', notificationRoutes);
 // Global sessions
 app.use('/api/sessions', globalSessionRoutes);
 app.use('/api/upload', uploadRoutes);
+
+// Daily practice logs (nested under classroom)
+app.use('/api/classrooms/:classroomId/daily-logs', dailyLogRoutes);
+
+// Classroom-level analytics (nested under classroom)
+app.use('/api/classrooms/:classroomId/analytics', analyticsRoutes);
+
+// Global analytics (trainer inbox-style, top-level)
+app.use('/api/analytics', analyticsRoutes);
 
 // Top-level notifications (trainer inbox)
 app.get('/api/notifications', authenticate, requireRole('trainer'), getNotifications);
