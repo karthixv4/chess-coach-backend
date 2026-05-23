@@ -39,9 +39,6 @@ const globalLimiter = rateLimit({
 // Apply helmet early to inject security headers
 app.use(helmet());
 
-// Apply global rate limiter
-app.use(globalLimiter);
-
 // Update CORS to be strict
 const allowedOrigins = process.env.FRONTEND_URL
   ? [process.env.FRONTEND_URL, 'http://localhost:5000', 'http://127.0.0.1:5000', 'http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000', 'https://chesscoach-theta.vercel.app']
@@ -58,6 +55,9 @@ app.use(cors({
   },
   credentials: true
 }));
+
+// Apply global rate limiter
+app.use(globalLimiter);
 
 app.use(express.json({ limit: '1mb' }));
 

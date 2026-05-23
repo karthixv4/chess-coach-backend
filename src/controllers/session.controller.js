@@ -75,6 +75,10 @@ const update = async (req, res, next) => {
     const updated = await prisma.session.update({
       where: { id: sessionId },
       data: updateData,
+      include: {
+        sessionMaterials: { include: { material: true } },
+        sessionHomework: { include: { homework: true } },
+      },
     });
 
     return res.status(200).json(updated);
@@ -116,7 +120,7 @@ const updateStatus = async (req, res, next) => {
 
     const updateData = { status: status.toUpperCase() };
 
-    if (notes) updateData.notes = notes;
+    if (notes !== undefined) updateData.notes = notes;
     if (cancellationReason) updateData.cancellationReason = cancellationReason;
 
     if (rescheduledTo) {
@@ -192,6 +196,7 @@ const remove = async (req, res, next) => {
 const getAllForClassroom = async (req, res, next) => {
   try {
     const { classroomId } = req.params;
+    const { startDate, endDate } = req.query;
     const { id, role } = req.user;
 
     const classroom = await prisma.classroom.findUnique({ where: { id: classroomId } });
@@ -203,8 +208,15 @@ const getAllForClassroom = async (req, res, next) => {
       return res.status(403).json({ error: 'Forbidden', message: 'You do not have access to these sessions.' });
     }
 
+    const whereClause = { classroomId };
+    if (startDate || endDate) {
+      whereClause.date = {};
+      if (startDate) whereClause.date.gte = new Date(startDate);
+      if (endDate) whereClause.date.lte = new Date(endDate);
+    }
+
     const sessions = await prisma.session.findMany({
-      where: { classroomId },
+      where: whereClause,
       orderBy: { date: 'asc' },
       include: {
         sessionMaterials: { include: { material: true } },
@@ -222,9 +234,10 @@ const getAllForClassroom = async (req, res, next) => {
 const getByStudentId = async (req, res, next) => {
   try {
     const { studentId } = req.params;
+    const { startDate, endDate } = req.query;
     const { id, role } = req.user;
 
-    if (role === 'STUDENT' && id !== studentId) {
+    if (role.toUpperCase() === 'STUDENT' && id !== studentId) {
       return res.status(403).json({ error: 'Forbidden', message: 'You can only view your own sessions.' });
     }
 
@@ -233,12 +246,19 @@ const getByStudentId = async (req, res, next) => {
       return res.status(404).json({ error: 'NotFound', message: 'No classroom found for this student.' });
     }
 
-    if (role === 'TRAINER' && classroom.trainerId !== id) {
+    if (role.toUpperCase() === 'TRAINER' && classroom.trainerId !== id) {
       return res.status(403).json({ error: 'Forbidden', message: 'You are not the trainer for this student.' });
     }
 
+    const whereClause = { classroomId: classroom.id };
+    if (startDate || endDate) {
+      whereClause.date = {};
+      if (startDate) whereClause.date.gte = new Date(startDate);
+      if (endDate) whereClause.date.lte = new Date(endDate);
+    }
+
     const sessions = await prisma.session.findMany({
-      where: { classroomId: classroom.id },
+      where: whereClause,
       orderBy: { date: 'asc' },
       include: {
         sessionMaterials: { include: { material: true } },
@@ -252,4 +272,49 @@ const getByStudentId = async (req, res, next) => {
   }
 };
 
-module.exports = { create, update, updateStatus, remove, getAllForClassroom, getByStudentId };
+// GET /api/sessions/trainer
+const getByTrainerId = async (req, res, next) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const { id, role } = req.user;
+
+    if (role.toUpperCase() !== 'TRAINER') {
+      return res.status(403).json({ error: 'Forbidden', message: 'Only trainers can access this endpoint.' });
+    }
+
+    const whereClause = {
+      classroom: { trainerId: id },
+    };
+
+    if (startDate || endDate) {
+      whereClause.date = {};
+      if (startDate) whereClause.date.gte = new Date(startDate);
+      if (endDate) whereClause.date.lte = new Date(endDate);
+    }
+
+    const sessions = await prisma.session.findMany({
+      where: whereClause,
+      orderBy: { date: 'asc' },
+      include: {
+        classroom: {
+          include: {
+            student: {
+              select: {
+                id: true,
+                name: true,
+              }
+            }
+          }
+        },
+        sessionMaterials: { include: { material: true } },
+        sessionHomework: { include: { homework: true } },
+      },
+    });
+
+    return res.status(200).json(sessions);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { create, update, updateStatus, remove, getAllForClassroom, getByStudentId, getByTrainerId };
