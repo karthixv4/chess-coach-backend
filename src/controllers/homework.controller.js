@@ -149,7 +149,7 @@ const submit = async (req, res, next) => {
       return res.status(400).json({ error: 'BadRequest', message: 'This homework has already been evaluated.' });
     }
 
-    const data = { submission, status: 'SUBMITTED' };
+    const data = { submission, status: 'SUBMITTED', submittedAt: new Date() };
     if (submissionImageUrls !== undefined) data.submissionImageUrls = submissionImageUrls;
 
     const updated = await prisma.homework.update({ where: { id: homeworkId }, data });
