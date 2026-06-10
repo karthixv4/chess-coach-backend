@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { create, getAll, getById, updateNotes, deleteClassroom } = require('../controllers/classroom.controller');
+const { create, getAll, getById, updateNotes, deleteClassroom, setMonthlyTarget, deleteMonthlyTarget } = require('../controllers/classroom.controller');
 const { authenticate } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
 
@@ -19,5 +19,11 @@ router.patch('/:classroomId/notes', authenticate, requireRole('trainer'), update
 
 // DELETE /api/classrooms/:classroomId — Trainer only
 router.delete('/:classroomId', authenticate, requireRole('trainer'), deleteClassroom);
+
+// PATCH /api/classrooms/:classroomId/targets — Trainer only
+router.patch('/:classroomId/targets', authenticate, requireRole('trainer'), setMonthlyTarget);
+
+// DELETE /api/classrooms/:classroomId/targets — Trainer only
+router.delete('/:classroomId/targets', authenticate, requireRole('trainer'), deleteMonthlyTarget);
 
 module.exports = router;

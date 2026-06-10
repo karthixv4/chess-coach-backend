@@ -21,6 +21,11 @@ enum SessionStatus {
   PREPONED
 }
 
+enum SessionMode {
+  ONLINE
+  OFFLINE
+}
+
 enum LessonStatus {
   NEW
   REVIEWED
@@ -38,6 +43,7 @@ enum HomeworkStatus {
   ASSIGNED
   SUBMITTED
   EVALUATED
+  REWORK
 }
 
 enum MaterialType {
@@ -91,12 +97,13 @@ model Classroom {
   studentId String @unique
   student   User   @relation("StudentClassroom", fields: [studentId], references: [id])
 
-  sessions      Session[]
-  lessons       Lesson[]
-  homework      Homework[]
-  materials     Material[]
-  notifications Notification[]
-  dailyLogs     DailyLog[]
+  sessions       Session[]
+  lessons        Lesson[]
+  homework       Homework[]
+  materials      Material[]
+  notifications  Notification[]
+  dailyLogs      DailyLog[]
+  monthlyTargets MonthlyTarget[]
 }
 
 model Session {
@@ -106,6 +113,7 @@ model Session {
   startTime          String
   endTime            String
   link               String?
+  mode               SessionMode   @default(ONLINE)
   status             SessionStatus @default(SCHEDULED)
   notes              String?       // Completion notes
   cancellationReason String?
@@ -237,4 +245,20 @@ model DailyLog {
   updatedAt DateTime @updatedAt
 
   @@unique([classroomId, date])     // Enforce 1 log per student per day
+}
+
+model MonthlyTarget {
+  id          String   @id @default(cuid())
+  month       Int
+  year        Int
+  target      Int
+  title       String?
+  
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([classroomId, month, year])
 }

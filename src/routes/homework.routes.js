@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const { create, update, submit, evaluate, getById, deleteHomework } = require('../controllers/homework.controller');
+const { create, update, submit, evaluate, requestRework, getById, deleteHomework } = require('../controllers/homework.controller');
 const { authenticate } = require('../middleware/auth');
 const { requireRole } = require('../middleware/role');
 
@@ -21,5 +21,8 @@ router.post('/:homeworkId/submit', authenticate, requireRole('student'), submit)
 
 // POST /api/classrooms/:classroomId/homework/:homeworkId/evaluate — Trainer only
 router.post('/:homeworkId/evaluate', authenticate, requireRole('trainer'), evaluate);
+
+// POST /api/classrooms/:classroomId/homework/:homeworkId/rework — Trainer only
+router.post('/:homeworkId/rework', authenticate, requireRole('trainer'), requestRework);
 
 module.exports = router;

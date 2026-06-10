@@ -19,7 +19,7 @@ const assertTrainerOwnsClassroom = async (classroomId, trainerId, res) => {
 const create = async (req, res, next) => {
   try {
     const { classroomId } = req.params;
-    const { title, date, startTime, endTime, link, notes, remarks } = req.body;
+    const { title, date, startTime, endTime, link, notes, remarks, mode } = req.body;
 
     if (!title || !date || !startTime || !endTime) {
       return res.status(400).json({ error: 'BadRequest', message: 'title, date, startTime, and endTime are required.' });
@@ -35,6 +35,7 @@ const create = async (req, res, next) => {
         date: new Date(date),
         startTime,
         endTime,
+        mode: mode || 'ONLINE',
         link: link || null,
         notes: notes || remarks || null,
         status: 'SCHEDULED',
@@ -51,7 +52,7 @@ const create = async (req, res, next) => {
 const update = async (req, res, next) => {
   try {
     const { classroomId, sessionId } = req.params;
-    const { title, date, startTime, endTime, link } = req.body;
+    const { title, date, startTime, endTime, link, mode } = req.body;
 
     const classroom = await assertTrainerOwnsClassroom(classroomId, req.user.id, res);
     if (!classroom) return;
@@ -66,6 +67,7 @@ const update = async (req, res, next) => {
     if (date !== undefined) updateData.date = new Date(date);
     if (startTime !== undefined) updateData.startTime = startTime;
     if (endTime !== undefined) updateData.endTime = endTime;
+    if (mode !== undefined) updateData.mode = mode;
     if (link !== undefined) updateData.link = link || null;
 
     if (Object.keys(updateData).length === 0) {

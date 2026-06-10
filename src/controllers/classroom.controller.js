@@ -100,6 +100,7 @@ const getById = async (req, res, next) => {
         lessons: { orderBy: { date: 'desc' } },
         homework: { orderBy: { createdAt: 'desc' } },
         materials: { orderBy: { createdAt: 'desc' } },
+        monthlyTargets: { orderBy: [ { year: 'desc' }, { month: 'desc' } ] },
       },
     });
 
@@ -136,6 +137,7 @@ const getById = async (req, res, next) => {
         return hw;
       }),
       materials: classroom.materials,
+      monthlyTargets: classroom.monthlyTargets,
     };
 
     // Notes are only returned to trainers
@@ -210,4 +212,97 @@ const deleteClassroom = async (req, res, next) => {
   }
 };
 
-module.exports = { create, getAll, getById, updateNotes, deleteClassroom };
+// PATCH /api/classrooms/:classroomId/targets
+const setMonthlyTarget = async (req, res, next) => {
+  try {
+    const { classroomId } = req.params;
+    const { month, year, target, title } = req.body;
+
+    if (month === undefined || year === undefined || target === undefined) {
+      return res.status(400).json({ error: 'BadRequest', message: '"month", "year", and "target" are required.' });
+    }
+
+    const classroom = await prisma.classroom.findUnique({ where: { id: classroomId } });
+    if (!classroom) {
+      return res.status(404).json({ error: 'NotFound', message: 'Classroom not found.' });
+    }
+    if (classroom.trainerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden', message: 'You are not the trainer of this classroom.' });
+    }
+
+    const monthlyTarget = await prisma.monthlyTarget.upsert({
+      where: {
+        classroomId_month_year: {
+          classroomId,
+          month,
+          year,
+        },
+      },
+      update: {
+        target,
+        title,
+      },
+      create: {
+        classroomId,
+        month,
+        year,
+        target,
+        title,
+      },
+    });
+
+    return res.status(200).json({ success: true, monthlyTarget });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// DELETE /api/classrooms/:classroomId/targets
+const deleteMonthlyTarget = async (req, res, next) => {
+  try {
+    const { classroomId } = req.params;
+    const { month, year } = req.query;
+
+    if (month === undefined || year === undefined) {
+      return res.status(400).json({ error: 'BadRequest', message: '"month" and "year" query params are required.' });
+    }
+
+    const m = parseInt(month, 10);
+    const y = parseInt(year, 10);
+
+    const classroom = await prisma.classroom.findUnique({ where: { id: classroomId } });
+    if (!classroom) {
+      return res.status(404).json({ error: 'NotFound', message: 'Classroom not found.' });
+    }
+    if (classroom.trainerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden', message: 'You are not the trainer of this classroom.' });
+    }
+
+    await prisma.monthlyTarget.delete({
+      where: {
+        classroomId_month_year: {
+          classroomId,
+          month: m,
+          year: y,
+        },
+      },
+    });
+
+    return res.status(200).json({ success: true, month: m, year: y });
+  } catch (err) {
+    if (err.code === 'P2025') {
+      return res.status(404).json({ error: 'NotFound', message: 'Target not found.' });
+    }
+    next(err);
+  }
+};
+
+module.exports = {
+  create,
+  getAll,
+  getById,
+  updateNotes,
+  deleteClassroom,
+  setMonthlyTarget,
+  deleteMonthlyTarget,
+};

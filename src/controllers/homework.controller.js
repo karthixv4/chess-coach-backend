@@ -194,6 +194,39 @@ const evaluate = async (req, res, next) => {
   }
 };
 
+// POST /api/classrooms/:classroomId/homework/:homeworkId/rework
+const requestRework = async (req, res, next) => {
+  try {
+    const { classroomId, homeworkId } = req.params;
+    const { feedback } = req.body;
+
+    if (!feedback) {
+      return res.status(400).json({ error: 'BadRequest', message: '"feedback" is required for rework.' });
+    }
+
+    const classroom = await assertTrainerOwnsClassroom(classroomId, req.user.id, res);
+    if (!classroom) return;
+
+    const homework = await prisma.homework.findUnique({ where: { id: homeworkId } });
+    if (!homework || homework.classroomId !== classroomId) {
+      return res.status(404).json({ error: 'NotFound', message: 'Homework not found.' });
+    }
+
+    const updated = await prisma.homework.update({
+      where: { id: homeworkId },
+      data: { feedback, status: 'ASSIGNED' },
+    });
+
+    // Recalculate and persist classroom progress
+    const { recalculateProgress } = require('../utils/progressCalc');
+    await recalculateProgress(classroomId);
+
+    return res.status(200).json(formatHomeworkResponse(updated));
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /api/classrooms/:classroomId/homework/:homeworkId
 const getById = async (req, res, next) => {
   try {
@@ -243,4 +276,4 @@ const deleteHomework = async (req, res, next) => {
   }
 };
 
-module.exports = { create, update, submit, evaluate, getById, deleteHomework };
+module.exports = { create, update, submit, evaluate, requestRework, getById, deleteHomework };
