@@ -14,6 +14,7 @@ const globalSessionRoutes = require('./routes/globalSession.routes');
 const uploadRoutes = require('./routes/upload.routes');
 const dailyLogRoutes = require('./routes/dailyLog.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
+const reportRoutes = require('./routes/report.routes');
 
 const { authenticate } = require('./middleware/auth');
 const { requireRole } = require('./middleware/role');
@@ -89,6 +90,9 @@ app.use('/api/classrooms/:classroomId/daily-logs', dailyLogRoutes);
 // Classroom-level analytics (nested under classroom)
 app.use('/api/classrooms/:classroomId/analytics', analyticsRoutes);
 
+// Monthly progress reports (nested under classroom)
+app.use('/api/classrooms/:classroomId/reports', reportRoutes);
+
 // Global analytics (trainer inbox-style, top-level)
 app.use('/api/analytics', analyticsRoutes);
 
@@ -106,6 +110,16 @@ app.use((req, res) => {
 
 // ── Global Error Handler (must be last) ────────────────────────────────────────
 app.use(errorHandler);
+
+// ── Start Jobs & Bots ──────────────────────────────────────────────────────────
+const homeworkOverdueJob = require('./jobs/homeworkOverdue.job');
+homeworkOverdueJob.start();
+
+const evaluationReminderJob = require('./jobs/evaluationReminder.job');
+evaluationReminderJob.start();
+
+const { startDiscordBot } = require('./discord/discordBot');
+startDiscordBot();
 
 // ── Start Server ───────────────────────────────────────────────────────────────
 app.listen(PORT, () => {

@@ -65,6 +65,11 @@ enum LogWorksheetStatus {
   COMPLETED
 }
 
+enum ReportStatus {
+  DRAFT
+  PUBLISHED
+}
+
 model User {
   id           String      @id @default(cuid())
   name         String
@@ -104,6 +109,17 @@ model Classroom {
   notifications  Notification[]
   dailyLogs      DailyLog[]
   monthlyTargets MonthlyTarget[]
+  monthlyReports MonthlyReport[]
+  coachNotes     CoachNote[]
+}
+
+model CoachNote {
+  id          String   @id @default(cuid())
+  note        String
+  createdAt   DateTime @default(now())
+
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 }
 
 model Session {
@@ -172,6 +188,7 @@ model Homework {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   submittedAt  DateTime?
+  lastRemindedAt DateTime?
 
   classroomId String
   classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
@@ -261,4 +278,31 @@ model MonthlyTarget {
   updatedAt   DateTime  @updatedAt
 
   @@unique([classroomId, month, year])
+}
+
+// Monthly progress report created by trainer, published to student/parent
+model MonthlyReport {
+  id     String       @id @default(cuid())
+  month  Int          // 1–12
+  year   Int
+  status ReportStatus @default(DRAFT)
+
+  // Snapshot of auto-computed stats at generation time (stored as JSON)
+  statsSnapshot Json
+
+  // Trainer-authored structured sections (Markdown)
+  areasOfStrength  String?
+  areasToImprove   String?
+  trainerComments  String?
+
+  // Parent/student acknowledgement
+  acknowledgedAt DateTime?
+
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([classroomId, month, year])  // One report per classroom per month
 }

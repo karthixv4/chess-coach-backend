@@ -123,7 +123,7 @@ const update = async (req, res, next) => {
 const submit = async (req, res, next) => {
   try {
     const { classroomId, homeworkId } = req.params;
-    const { submission, submissionImageUrls } = req.body;
+    const { submission, submissionImageUrls } = req.body || {};
 
     if (!submission) {
       return res.status(400).json({ error: 'BadRequest', message: '"submission" is required.' });
@@ -133,7 +133,10 @@ const submit = async (req, res, next) => {
       return res.status(400).json({ error: 'BadRequest', message: '"submissionImageUrls" must be an array of strings.' });
     }
 
-    const classroom = await prisma.classroom.findUnique({ where: { id: classroomId } });
+    const classroom = await prisma.classroom.findUnique({ 
+      where: { id: classroomId },
+      include: { student: true }
+    });
     if (!classroom) {
       return res.status(404).json({ error: 'NotFound', message: 'Classroom not found.' });
     }
@@ -153,6 +156,24 @@ const submit = async (req, res, next) => {
     if (submissionImageUrls !== undefined) data.submissionImageUrls = submissionImageUrls;
 
     const updated = await prisma.homework.update({ where: { id: homeworkId }, data });
+
+    // Discord Notification: Worksheet Submitted
+    const notificationService = require('../services/notification.service');
+    notificationService.notifyWorksheetSubmitted(
+      classroom.student.name,
+      updated.title,
+      updated.submittedAt
+    );
+
+    // Discord Notification: Check if all homework is completed
+    const pendingHomeworkCount = await prisma.homework.count({
+      where: { classroomId, status: 'ASSIGNED' }
+    });
+
+    if (pendingHomeworkCount === 0) {
+      notificationService.notifyAllHomeworkCompleted(classroom.student.name);
+    }
+
     return res.status(200).json(formatHomeworkResponse(updated));
   } catch (err) {
     next(err);
