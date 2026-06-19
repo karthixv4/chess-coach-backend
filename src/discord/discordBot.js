@@ -86,39 +86,46 @@ const startDiscordBot = async () => {
     const { commandName } = interaction;
 
     try {
+      await interaction.deferReply(); // Let Discord know we're processing
+
       if (commandName === 'student') {
         const name = interaction.options.getString('name');
         const res = await commandService.getStudentStatus(name);
-        await interaction.reply({ content: res });
+        await interaction.editReply({ content: res });
       } else if (commandName === 'pending') {
         const res = await commandService.getPendingHomework();
-        await interaction.reply({ content: res });
+        await interaction.editReply({ content: res });
       } else if (commandName === 'today') {
         const res = await commandService.getTodaysSessions();
-        await interaction.reply({ content: res });
+        await interaction.editReply({ content: res });
       } else if (commandName === 'summary') {
         const res = await commandService.getWeeklySummary();
-        await interaction.reply({ content: res });
+        await interaction.editReply({ content: res });
       } else if (commandName === 'students') {
         const res = await commandService.getAllStudents();
-        await interaction.reply({ content: res });
+        await interaction.editReply({ content: res });
       } else if (commandName === 'note') {
         const name = interaction.options.getString('name');
         const text = interaction.options.getString('text');
         const res = await commandService.addCoachNote(name, text);
-        await interaction.reply({ content: res });
+        await interaction.editReply({ content: res });
       } else if (commandName === 'complete-session') {
         const name = interaction.options.getString('name');
         const topic = interaction.options.getString('topic');
         const res = await commandService.completeSession(name, topic);
-        await interaction.reply({ content: res });
+        await interaction.editReply({ content: res });
       } else if (commandName === 'evaluation') {
         const res = await commandService.getPendingEvaluations();
-        await interaction.reply({ content: res });
+        await interaction.editReply({ content: res });
       }
     } catch (err) {
       console.error(`[DiscordBot] Error handling /${commandName}:`, err.message);
-      await interaction.reply({ content: 'An internal error occurred while processing the command.', ephemeral: true });
+      try {
+        // Since we deferred the reply, we must use editReply instead of reply
+        await interaction.editReply({ content: 'An internal error occurred while processing the command.' });
+      } catch (e) {
+        console.error(`[DiscordBot] Failed to send error message to Discord:`, e.message);
+      }
     }
   });
 
