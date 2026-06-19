@@ -61,6 +61,10 @@ app.use(cors({
 // Apply global rate limiter
 app.use(globalLimiter);
 
+// The Discord Webhook router must be mounted BEFORE express.json() so it can verify the raw request signature
+const { discordRouter } = require('./discord/discordBot');
+app.use('/api/discord', discordRouter);
+
 app.use(express.json({ limit: '1mb' }));
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
@@ -119,8 +123,8 @@ homeworkOverdueJob.start();
 const evaluationReminderJob = require('./jobs/evaluationReminder.job');
 evaluationReminderJob.start();
 
-const { startDiscordBot } = require('./discord/discordBot');
-startDiscordBot();
+const { registerDiscordCommands } = require('./discord/discordBot');
+registerDiscordCommands();
 
 // ── Start Server ───────────────────────────────────────────────────────────────
 app.listen(PORT, () => {

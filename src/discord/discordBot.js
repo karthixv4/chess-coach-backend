@@ -1,18 +1,93 @@
-const { Client, GatewayIntentBits, REST, Routes } = require('discord.js');
+const express = require('express');
+const axios = require('axios');
+const { verifyKeyMiddleware, InteractionType, InteractionResponseType } = require('discord-interactions');
 const commandService = require('./DiscordCommandService');
 
-const startDiscordBot = async () => {
+const router = express.Router();
+
+const getOption = (options, name) => options?.find(o => o.name === name)?.value;
+
+router.post('/interactions', verifyKeyMiddleware(process.env.DISCORD_PUBLIC_KEY), async (req, res) => {
+  const interaction = req.body;
+
+  // Handle PING from Discord
+  if (interaction.type === InteractionType.PING) {
+    return res.send({ type: InteractionResponseType.PONG });
+  }
+
+  // Handle Application Commands
+  if (interaction.type === InteractionType.APPLICATION_COMMAND) {
+    const coachUserId = process.env.DISCORD_COACH_USER_ID;
+    
+    // Authorization check
+    // user ID can be in member.user.id (if from a server) or user.id (if in DMs)
+    const senderId = interaction.member?.user?.id || interaction.user?.id;
+    if (senderId !== coachUserId) {
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: { content: 'Access denied.', flags: 64 }, // Ephemeral
+      });
+    }
+
+    // Immediately DEFER the reply (Bot is thinking...)
+    res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
+
+    const commandName = interaction.data.name;
+    const options = interaction.data.options || [];
+    
+    try {
+      let result = '';
+
+      if (commandName === 'student') {
+        const name = getOption(options, 'name');
+        result = await commandService.getStudentStatus(name);
+      } else if (commandName === 'pending') {
+        result = await commandService.getPendingHomework();
+      } else if (commandName === 'today') {
+        result = await commandService.getTodaysSessions();
+      } else if (commandName === 'summary') {
+        result = await commandService.getWeeklySummary();
+      } else if (commandName === 'students') {
+        result = await commandService.getAllStudents();
+      } else if (commandName === 'note') {
+        const name = getOption(options, 'name');
+        const text = getOption(options, 'text');
+        result = await commandService.addCoachNote(name, text);
+      } else if (commandName === 'complete-session') {
+        const name = getOption(options, 'name');
+        const topic = getOption(options, 'topic');
+        result = await commandService.completeSession(name, topic);
+      } else if (commandName === 'evaluation') {
+        result = await commandService.getPendingEvaluations();
+      }
+
+      // Update the deferred reply via Discord REST API
+      await axios.patch(`https://discord.com/api/v10/webhooks/${process.env.DISCORD_CLIENT_ID}/${interaction.token}/messages/@original`, {
+        content: result
+      });
+
+    } catch (err) {
+      console.error(`[DiscordBot] Error handling /${commandName}:`, err.message);
+      try {
+        await axios.patch(`https://discord.com/api/v10/webhooks/${process.env.DISCORD_CLIENT_ID}/${interaction.token}/messages/@original`, {
+          content: 'An internal error occurred while processing the command.'
+        });
+      } catch (e) {
+        console.error(`[DiscordBot] Failed to send error message to Discord:`, e.message);
+      }
+    }
+  }
+});
+
+const registerDiscordCommands = async () => {
   const token = process.env.DISCORD_BOT_TOKEN;
   const clientId = process.env.DISCORD_CLIENT_ID;
   const guildId = process.env.DISCORD_GUILD_ID;
-  const coachUserId = process.env.DISCORD_COACH_USER_ID;
 
-  if (!token || !clientId || !guildId || !coachUserId) {
-    console.warn('[DiscordBot] Missing required environment variables. Bot will not start.');
+  if (!token || !clientId || !guildId) {
+    console.warn('[DiscordBot] Missing environment variables for command registration.');
     return;
   }
-
-  const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
   const commands = [
     {
@@ -58,80 +133,17 @@ const startDiscordBot = async () => {
     }
   ];
 
-  const rest = new REST({ version: '10' }).setToken(token);
-
   try {
     console.log('[DiscordBot] Started refreshing application (/) commands.');
-    await rest.put(
-      Routes.applicationGuildCommands(clientId, guildId),
-      { body: commands },
+    await axios.put(
+      `https://discord.com/api/v10/applications/${clientId}/guilds/${guildId}/commands`,
+      commands,
+      { headers: { Authorization: `Bot ${token}` } }
     );
     console.log('[DiscordBot] Successfully reloaded application (/) commands.');
   } catch (error) {
-    console.error('[DiscordBot] Failed to register commands:', error);
+    console.error('[DiscordBot] Failed to register commands:', error.response?.data || error.message);
   }
-
-  client.on('ready', () => {
-    console.log(`[DiscordBot] Logged in as ${client.user.tag}!`);
-  });
-
-  client.on('interactionCreate', async interaction => {
-    if (!interaction.isChatInputCommand()) return;
-
-    if (interaction.user.id !== coachUserId) {
-      await interaction.reply({ content: 'Access denied.', ephemeral: true });
-      return;
-    }
-
-    const { commandName } = interaction;
-
-    try {
-      await interaction.deferReply(); // Let Discord know we're processing
-
-      if (commandName === 'student') {
-        const name = interaction.options.getString('name');
-        const res = await commandService.getStudentStatus(name);
-        await interaction.editReply({ content: res });
-      } else if (commandName === 'pending') {
-        const res = await commandService.getPendingHomework();
-        await interaction.editReply({ content: res });
-      } else if (commandName === 'today') {
-        const res = await commandService.getTodaysSessions();
-        await interaction.editReply({ content: res });
-      } else if (commandName === 'summary') {
-        const res = await commandService.getWeeklySummary();
-        await interaction.editReply({ content: res });
-      } else if (commandName === 'students') {
-        const res = await commandService.getAllStudents();
-        await interaction.editReply({ content: res });
-      } else if (commandName === 'note') {
-        const name = interaction.options.getString('name');
-        const text = interaction.options.getString('text');
-        const res = await commandService.addCoachNote(name, text);
-        await interaction.editReply({ content: res });
-      } else if (commandName === 'complete-session') {
-        const name = interaction.options.getString('name');
-        const topic = interaction.options.getString('topic');
-        const res = await commandService.completeSession(name, topic);
-        await interaction.editReply({ content: res });
-      } else if (commandName === 'evaluation') {
-        const res = await commandService.getPendingEvaluations();
-        await interaction.editReply({ content: res });
-      }
-    } catch (err) {
-      console.error(`[DiscordBot] Error handling /${commandName}:`, err.message);
-      try {
-        // Since we deferred the reply, we must use editReply instead of reply
-        await interaction.editReply({ content: 'An internal error occurred while processing the command.' });
-      } catch (e) {
-        console.error(`[DiscordBot] Failed to send error message to Discord:`, e.message);
-      }
-    }
-  });
-
-  client.login(token).catch(err => {
-    console.error('[DiscordBot] Failed to login:', err.message);
-  });
 };
 
-module.exports = { startDiscordBot };
+module.exports = { discordRouter: router, registerDiscordCommands };
