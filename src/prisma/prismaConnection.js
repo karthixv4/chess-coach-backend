@@ -8,7 +8,7 @@ const pool = new Pool({
   connectionString,
   max: 10, // Limit pool size
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 20000,
+  // Removed connectionTimeoutMillis to prevent timeouts when Neon DB wakes up from cold start
 });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({
