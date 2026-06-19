@@ -25,6 +25,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy to fix express-rate-limit X-Forwarded-For error
 const PORT = process.env.PORT || 3000;
 
 // ── Rate Limiting Setup ────────────────────────────────────────────────────────
