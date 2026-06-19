@@ -7,7 +7,12 @@ const router = express.Router();
 
 const getOption = (options, name) => options?.find(o => o.name === name)?.value;
 
-router.post('/interactions', verifyKeyMiddleware(process.env.DISCORD_PUBLIC_KEY), async (req, res) => {
+// In development, we bypass the Discord signature check so you can test via Postman
+const interactionMiddleware = process.env.NODE_ENV === 'development'
+  ? [express.json(), (req, res, next) => next()]
+  : [verifyKeyMiddleware(process.env.DISCORD_PUBLIC_KEY)];
+
+router.post('/interactions', ...interactionMiddleware, async (req, res) => {
   const interaction = req.body;
 
   // Handle PING from Discord
@@ -28,9 +33,6 @@ router.post('/interactions', verifyKeyMiddleware(process.env.DISCORD_PUBLIC_KEY)
         data: { content: 'Access denied.', flags: 64 }, // Ephemeral
       });
     }
-
-    // Immediately DEFER the reply (Bot is thinking...)
-    res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
 
     const commandName = interaction.data.name;
     const options = interaction.data.options || [];
@@ -61,19 +63,28 @@ router.post('/interactions', verifyKeyMiddleware(process.env.DISCORD_PUBLIC_KEY)
         result = await commandService.getPendingEvaluations();
       }
 
-      // Update the deferred reply via Discord REST API
-      await axios.patch(`https://discord.com/api/v10/webhooks/${process.env.DISCORD_CLIENT_ID}/${interaction.token}/messages/@original`, {
-        content: result
+      // In development, log the result so we can see it during Postman testing
+      if (process.env.NODE_ENV === 'development') {
+        console.log("=== DISCORD BOT RESPONSE ===");
+        console.log(result);
+        console.log("============================");
+      }
+
+      // Send the final result directly in the HTTP response (Synchronous mode)
+      res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: result
+        }
       });
 
     } catch (err) {
       console.error(`[DiscordBot] Error handling /${commandName}:`, err.message);
-      try {
-        await axios.patch(`https://discord.com/api/v10/webhooks/${process.env.DISCORD_CLIENT_ID}/${interaction.token}/messages/@original`, {
-          content: 'An internal error occurred while processing the command.'
+      if (!res.headersSent) {
+        res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: 'An internal error occurred while processing the command.' }
         });
-      } catch (e) {
-        console.error(`[DiscordBot] Failed to send error message to Discord:`, e.message);
       }
     }
   }
