@@ -48,15 +48,27 @@ const buildStatsSnapshot = async (classroomId, month, year) => {
   // Homework (all homework for this classroom, evaluated/submitted within this month)
   const allHomework = await prisma.homework.findMany({
     where: { classroomId },
-    select: { id: true, status: true, score: true, createdAt: true, submittedAt: true },
+    select: { id: true, status: true, score: true, createdAt: true, submittedAt: true, updatedAt: true },
   });
   // Homework assigned this month
   const hwAssigned = allHomework.filter(h => {
     const d = new Date(h.createdAt);
     return d >= startDate && d <= endDate;
   });
-  const hwSubmitted = hwAssigned.filter(h => ['SUBMITTED', 'EVALUATED'].includes(h.status));
-  const hwEvaluated = hwAssigned.filter(h => h.status === 'EVALUATED');
+
+  // Homework submitted this month
+  const hwSubmitted = allHomework.filter(h => {
+    if (!['SUBMITTED', 'EVALUATED'].includes(h.status)) return false;
+    const d = h.submittedAt ? new Date(h.submittedAt) : new Date(h.updatedAt);
+    return d >= startDate && d <= endDate;
+  });
+
+  // Homework evaluated this month
+  const hwEvaluated = allHomework.filter(h => {
+    if (h.status !== 'EVALUATED') return false;
+    const d = h.submittedAt ? new Date(h.submittedAt) : new Date(h.updatedAt);
+    return d >= startDate && d <= endDate;
+  });
   const scores = hwEvaluated.map(h => h.score).filter(s => s != null);
   const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
 
